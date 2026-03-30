@@ -2,22 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-
-const ACCESS = {
-  DISCORD: 1 << 0,
-  ROBLOX: 1 << 1,
-  MANAGER: 1 << 2,
-};
-
-function hasAccess(access: number, permission: number) {
-  return (access & permission) === permission;
-}
+import { useRouter } from "next/navigation";
 
 type Guild = {
   id: string;
   name: string;
   icon: string | null;
-  access: number;
   manageable: boolean;
   source: "discord" | "fallback" | "enriched";
 };
@@ -26,266 +16,238 @@ export default function Dashboard() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "manageable" | "limited">("all");
+
+  const router = useRouter();
+
+  const loadGuilds = async (forceRefresh = false) => {
+    try {
+      setError("");
+      const url = forceRefresh ? "/api/guilds?refresh=true" : "/api/guilds";
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(typeof data?.error === "string" ? data.error : "Failed to load guilds");
+        setGuilds([]);
+        return;
+      }
+
+      setGuilds(Array.isArray(data) ? data : []);
+    } catch {
+      setError("Failed to load guilds");
+      setGuilds([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/guilds/refresh", { method: "POST" });
+      if (res.ok) {
+        await loadGuilds(true);
+      } else {
+        setError("Failed to refresh cache");
+      }
+    } catch {
+      setError("Failed to refresh data");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const loadGuilds = async () => {
-      try {
-        const res = await fetch("/api/guilds");
-        const data = await res.json();
-
-        if (!res.ok) {
-          setError(typeof data?.error === "string" ? data.error : "Failed to load guilds");
-          setGuilds([]);
-          setLoading(false);
-          return;
-        }
-
-        setGuilds(Array.isArray(data) ? data : []);
-      } catch {
-        setError("Failed to load guilds");
-        setGuilds([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadGuilds();
   }, []);
 
   const filteredGuilds = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+    const q = query.toLowerCase();
 
-    return guilds.filter((guild) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        guild.name.toLowerCase().includes(normalizedQuery) ||
-        guild.id.includes(normalizedQuery);
-
-      if (!matchesQuery) {
-        return false;
-      }
-
-      if (filter === "manageable") {
-        return guild.manageable;
-      }
-
-      if (filter === "limited") {
-        return guild.source === "fallback";
-      }
-
-      return true;
-    });
-  }, [filter, guilds, query]);
-
-  const manageableCount = guilds.filter((guild) => guild.manageable).length;
-  const discordCount = guilds.filter((guild) => hasAccess(guild.access, ACCESS.DISCORD)).length;
-  const robloxCount = guilds.filter((guild) => hasAccess(guild.access, ACCESS.ROBLOX)).length;
+    return guilds.filter((g) =>
+      g.name.toLowerCase().includes(q) || g.id.includes(q)
+    );
+  }, [guilds, query]);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black px-4 pb-14 pt-10 sm:px-6 lg:px-10">
-      <div className="pointer-events-none absolute inset-x-0 -top-20 h-80 bg-linear-to-b from-cyan-500/18 via-blue-500/10 to-transparent blur-3xl" />
-      <div className="pointer-events-none absolute -right-16 top-28 h-64 w-64 rounded-full bg-fuchsia-500/15 blur-3xl" />
+    <div className="relative min-h-screen bg-black px-4 pb-16 pt-12 sm:px-6 lg:px-10">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-linear-to-b from-purple-600/20 via-purple-600/10 to-transparent blur-3xl" />
 
-      <div className="relative mx-auto max-w-7xl">
-        <section className="pb-8">
-          <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">CYNI Command</p>
-          <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative mx-auto max-w-6xl">
+        <div className="mb-12">
+          <div className="flex items-baseline gap-3 mb-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-purple-400">Dashboard</p>
+            <div className="h-px flex-1 bg-gradient-to-r from-purple-600/30 to-transparent" />
+          </div>
+          
+          <div className="mb-8">
+            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-white mb-3">
+              Your Servers
+            </h1>
+            <p className="text-lg text-gray-400 max-w-2xl">
+              Access and manage your Discord server infrastructure. Select any server to configure moderation, automations, and community tools.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-8 py-6 border-y border-gray-800">
             <div>
-              <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-                Guild Ops, Instantly
-              </h1>
-              <p className="mt-3 max-w-2xl text-base text-gray-300/85">
-                Premium speed workflow: open server panels directly from each row with no intermediate selection step.
+              <p className="text-sm uppercase tracking-wide text-gray-500">Total Servers</p>
+              <p className="text-3xl font-bold text-white mt-1">{guilds.length}</p>
+            </div>
+            <div>
+              <p className="text-sm uppercase tracking-wide text-gray-500">Manageable</p>
+              <p className="text-3xl font-bold text-purple-400 mt-1">
+                {guilds.filter((g) => g.manageable).length}
               </p>
             </div>
-
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-sm sm:grid-cols-4 sm:text-base">
-              <Metric label="Total" value={guilds.length} accent="text-cyan-300" />
-              <Metric label="Manageable" value={manageableCount} accent="text-violet-300" />
-              <Metric label="Discord" value={discordCount} accent="text-indigo-300" />
-              <Metric label="Roblox" value={robloxCount} accent="text-emerald-300" />
+            <div>
+              <p className="text-sm uppercase tracking-wide text-gray-500">Limited Access</p>
+              <p className="text-3xl font-bold text-gray-400 mt-1">
+                {guilds.filter((g) => !g.manageable).length}
+              </p>
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search server name or ID"
-              className="w-full rounded-full bg-white/5 px-5 py-3 text-sm text-white placeholder:text-gray-500 outline-none ring-1 ring-white/10 transition focus:ring-cyan-300/70"
-            />
-
-            <div className="inline-flex rounded-full bg-white/5 p-1 ring-1 ring-white/10 md:w-auto">
-              <FilterButton active={filter === "all"} onClick={() => setFilter("all")} label="All" />
-              <FilterButton
-                active={filter === "manageable"}
-                onClick={() => setFilter("manageable")}
-                label="Manageable"
-              />
-              <FilterButton
-                active={filter === "limited"}
-                onClick={() => setFilter("limited")}
-                label="Limited"
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <svg
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search servers by name or ID..."
+                className="w-full pl-12 pr-5 py-4 rounded-xl border border-gray-800 bg-gray-950/50 text-white placeholder-gray-500 outline-none transition hover:border-gray-700 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20"
               />
             </div>
+
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="px-6 py-4 rounded-xl border border-purple-600/50 bg-purple-600/10 text-purple-400 font-medium text-sm uppercase tracking-wide transition-all duration-300 hover:border-purple-500 hover:bg-purple-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <svg
+                className={`w-4 h-4 transition-transform duration-500 ${refreshing ? "animate-spin" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
-        </section>
+        </div>
 
         {error && (
-          <div className="mb-4 rounded-full bg-red-500/15 px-4 py-2 text-sm text-red-200 ring-1 ring-red-400/30">
+          <div className="mb-8 p-4 rounded-xl border border-red-500/30 bg-red-950/20 text-red-300 text-sm">
             {error}
           </div>
         )}
 
-        <section className="mt-2">
-          <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.24em] text-gray-500">
-            <h2>Launch Servers</h2>
-            <p>{filteredGuilds.length} visible</p>
-          </div>
-
-          {loading && (
-            <div className="divide-y divide-white/8 rounded-3xl bg-white/3 px-4 ring-1 ring-white/10">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={`loading-${index}`}
-                  className="h-24 animate-pulse"
-                  style={{ animationDelay: `${index * 80}ms` }}
-                />
-              ))}
-            </div>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {loading &&
+            Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-56 rounded-2xl border border-gray-800 bg-gray-900/50 animate-pulse"
+                style={{ animationDelay: `${i * 50}ms` }}
+              />
+            ))}
 
           {!loading && filteredGuilds.length === 0 && (
-            <div className="rounded-3xl bg-white/3 px-6 py-10 text-center text-sm text-gray-400 ring-1 ring-white/10">
-              No guilds match your current search or filter.
+            <div className="col-span-full text-center py-16">
+              <p className="text-gray-400 text-lg">No servers match your search.</p>
             </div>
           )}
 
-          {!loading && filteredGuilds.length > 0 && (
-            <div className="divide-y divide-white/8 rounded-3xl bg-white/3 px-4 ring-1 ring-white/10 sm:px-6">
-              {filteredGuilds.map((guild, index) => {
-                const managerAccess = hasAccess(guild.access, ACCESS.MANAGER);
-                const discordAccess = hasAccess(guild.access, ACCESS.DISCORD);
-                const robloxAccess = hasAccess(guild.access, ACCESS.ROBLOX);
+          {!loading &&
+            filteredGuilds.map((guild, idx) => (
+              <div
+                key={guild.id}
+                onClick={() => router.push(`/dashboard/${guild.id}`)}
+                className="group relative rounded-2xl border border-gray-800 bg-gray-950/50 p-6 cursor-pointer transition-all duration-300 hover:border-purple-600/50 hover:bg-gray-900/80 hover:shadow-lg hover:shadow-purple-600/10 hover:-translate-y-1"
+                style={{ animation: `slideUp 0.5s ease-out ${idx * 50}ms both` }}
+              >
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                return (
-                  <article
-                    key={guild.id}
-                    className="grid gap-4 py-5 transition duration-300 hover:rounded-3xl hover:bg-white/3 sm:grid-cols-[1fr_auto] sm:items-center"
-                    style={{ animationDelay: `${index * 35}ms` }}
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Image
-                        src={
-                          guild.icon
-                            ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
-                            : "/images/cyni-rev.png"
-                        }
-                        alt={guild.name}
-                        width={52}
-                        height={52}
-                        className="rounded-2xl object-cover ring-1 ring-white/20"
-                      />
+                <div className="relative">
+                  <div className="mb-4 inline-block">
+                    <Image
+                      src={
+                        guild.icon
+                          ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png`
+                          : "/images/cyni-rev.png"
+                      }
+                      alt={guild.name}
+                      width={72}
+                      height={72}
+                      className="aspect-square rounded-xl border border-gray-800 object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                  </div>
 
-                      <div className="min-w-0">
-                        <p className="truncate text-base font-semibold text-white">{guild.name}</p>
-                        <p className="truncate text-xs text-gray-400">{guild.id}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <Pill label="Manager" enabled={managerAccess} />
-                          <Pill label="Discord" enabled={discordAccess} />
-                          <Pill label="Roblox" enabled={robloxAccess} />
-                          {guild.source === "fallback" && <Pill label="Limited" enabled={false} />}
-                        </div>
-                      </div>
-                    </div>
+                  <div className="absolute top-2 right-2">
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-semibold rounded-full transition-colors duration-300 ${
+                        guild.manageable
+                          ? "bg-purple-600/20 text-purple-300 border border-purple-600/40"
+                          : "bg-gray-800 text-gray-400 border border-gray-700"
+                      }`}
+                    >
+                      {guild.manageable ? "Manage" : "View"}
+                    </span>
+                  </div>
 
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      {managerAccess && <ActionButton label="Dashboard" variant="primary" />}
-                      {discordAccess && <ActionButton label="Discord" variant="discord" />}
-                      {robloxAccess && <ActionButton label="Roblox" variant="roblox" />}
-                      {!managerAccess && !discordAccess && !robloxAccess && (
-                        <span className="px-2 py-1 text-xs text-gray-500">No panel access</span>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                  <h2 className="text-xl font-semibold text-white mb-1 truncate group-hover:text-purple-300 transition-colors">
+                    {guild.name}
+                  </h2>
+                  <p className="text-xs text-gray-500 font-mono truncate mb-3">{guild.id}</p>
+
+                  {!guild.manageable && (
+                    <p className="text-xs text-gray-500 mb-3">Limited access - view only</p>
+                  )}
+
+                  <div className="flex items-center gap-2 text-purple-400 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Open Server
+                    <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ))}
+        </div>
       </div>
+
+      <style>{`
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
-  );
-}
-
-function Metric({ label, value, accent }: { label: string; value: number; accent: string }) {
-  return (
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${accent}`}>{value}</p>
-    </div>
-  );
-}
-
-function FilterButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-xs font-medium transition ${
-        active
-          ? "bg-cyan-400/20 text-cyan-200"
-          : "text-gray-400 hover:bg-white/10 hover:text-gray-200"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function Pill({ label, enabled }: { label: string; enabled: boolean }) {
-  return (
-    <span
-      className={`rounded-md border px-2 py-1 text-[11px] ${
-        enabled
-          ? "border-cyan-400/30 bg-cyan-400/10 text-cyan-200"
-          : "border-white/10 bg-white/5 text-gray-400"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function ActionButton({
-  label,
-  variant,
-}: {
-  label: string;
-  variant: "primary" | "discord" | "roblox";
-}) {
-  const styles = {
-    primary: "bg-linear-to-r from-cyan-500 to-violet-600 text-white hover:opacity-90",
-    discord: "bg-indigo-500/20 text-indigo-200 hover:bg-indigo-500/30 ring-1 ring-indigo-400/25",
-    roblox: "bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30 ring-1 ring-emerald-400/25",
-  };
-
-  return (
-    <button
-      type="button"
-      className={`rounded-full px-4 py-2 text-sm font-medium transition ${styles[variant]}`}
-    >
-      {label}
-    </button>
   );
 }
