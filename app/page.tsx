@@ -38,12 +38,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12 text-center px-6">
 
           <div>
-            <h2 className="text-5xl font-bold text-purple-500">10K+</h2>
+            <h2 className="text-5xl font-bold text-purple-500">30K+</h2>
             <p className="text-gray-400 mt-3">Active Users</p>
           </div>
 
           <div>
-            <h2 className="text-5xl font-bold text-purple-500">200+</h2>
+            <h2 className="text-5xl font-bold text-purple-500">300+</h2>
             <p className="text-gray-400 mt-3">Servers</p>
           </div>
 

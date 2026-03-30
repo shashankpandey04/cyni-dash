@@ -3,11 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { auth, loading } = useAuth();
+  const { data: session, status } = useSession();
+
+  const loading = status === "loading";
+  const user = session?.user;
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-black/60 border-b border-gray-800">
@@ -33,30 +36,36 @@ export default function Navbar() {
               Home
             </NavLink>
 
-            {auth?.type === "guild" && (
+            {/* Show dashboard if logged in */}
+            {user && (
               <NavLink href="/dashboard" pathname={pathname}>
                 Dashboard
               </NavLink>
             )}
 
-            {!auth && (
-              <NavLink href="/login" pathname={pathname}>
+            {/* Not logged in */}
+            {!user && (
+              <button
+                onClick={() => signIn("discord")}
+                className="text-gray-300 hover:text-white transition font-medium"
+              >
                 Login
-              </NavLink>
+              </button>
             )}
 
-            {auth && (
+            {/* Logged in */}
+            {user && (
               <>
-                <Link
-                  href="/logout"
+                <button
+                  onClick={() => signOut()}
                   className="text-gray-300 hover:text-red-400 transition font-medium"
                 >
                   Logout
-                </Link>
+                </button>
 
-                {auth.discord_pfp_link && (
+                {user.avatar && (
                   <Image
-                    src={auth.discord_pfp_link}
+                    src={user.avatar}
                     alt="Profile"
                     width={36}
                     height={36}

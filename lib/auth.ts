@@ -1,28 +1,50 @@
-import { cookies } from "next/headers";
+import { NextAuthOptions } from "next-auth";
+import DiscordProvider from "next-auth/providers/discord";
+import type { DiscordProfile } from "next-auth/providers/discord";
 
-export async function getAuth() {
-  const token = (await cookies()).get("auth_token")?.value;
+export const authOptions: NextAuthOptions = {
+  providers: [
+    DiscordProvider({
+      clientId: process.env.DISCORD_CLIENT_ID!,
+      clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+    }),
+  ],
 
-  if (!token) return null;
+  session: {
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60,
+    updateAge: 24 * 60 * 60,
+  },
 
-  try {
-    const res = await fetch(
-      `${process.env.AUTH_API_URL}/auth/verify`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        cache: "no-store",
+  callbacks: {
+    async jwt({ token, account, profile }) {
+      if (account && profile) {
+        const discordProfile = profile as DiscordProfile;
+
+        token.accessToken = account.access_token;
+
+        token.id = discordProfile.id;
+        token.username = discordProfile.username;
+        token.displayName = discordProfile.global_name ?? discordProfile.username;
+        token.avatar = discordProfile.avatar
+          ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png`
+          : "";
       }
-    );
+      return token;
+    },
 
-    if (!res.ok) return null;
+    async session({ session, token }) {
+      session.accessToken = token.accessToken;
 
-    const data = await res.json();
-    return data;
-  } catch {
-    return null;
+      session.user = {
+        id: token.id,
+        username: token.username,
+        displayName: token.displayName,
+        avatar: token.avatar,
+      };
+
+      return session;
+    },
   }
-}
+  
+};
