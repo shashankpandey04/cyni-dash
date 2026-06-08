@@ -1,184 +1,186 @@
-import FooterYear from "@/components/FooterYear";
+"use client";
+
+import Image from "next/image";
+import FeaturesSection from "@/components/landing/features";
 
 export default function Home() {
   return (
-    <main className="bg-black text-white">
-
-      <section className="relative h-screen w-full overflow-hidden flex items-center justify-center text-center px-6">
+    <main className="bg-black text-white overflow-x-hidden">
+      <section className="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
         <video
           src="/videos/CYNI.mp4"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover"
           autoPlay
           loop
           muted
         />
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
-        <div className="relative z-10 max-w-4xl">
-          <h1 className="text-6xl md:text-7xl font-bold tracking-tight">
-            CYNI
+
+        <div className="absolute inset-0 bg-black/80" />
+
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.15),transparent_50%)]" />
+
+        <div className="relative z-10 max-w-5xl">
+          <h1 className="text-6xl md:text-8xl font-bold tracking-tight">
+            Operate Your
+            <span className="block text-cyan-400">Discord Community</span>
           </h1>
 
-          <p className="mt-6 text-xl text-gray-300">
-            Infrastructure-grade moderation and automation  
-            for serious Discord communities.
+          <p className="mt-8 text-xl text-gray-400 max-w-3xl mx-auto">
+            Moderation, support operations, staff management, automations, and
+            analytics unified into a single platform built for scale.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-6 justify-center">
-            <button className="bg-purple-600 hover:bg-purple-700 transition px-8 py-4 rounded-xl font-semibold shadow-lg shadow-purple-600/30">
+          <div className="mt-12 flex flex-col sm:flex-row gap-5 justify-center">
+            <button className="bg-cyan-500 text-black hover:bg-cyan-400 transition px-8 py-4 rounded-xl font-semibold shadow-lg shadow-cyan-500/30">
               Add to Discord
             </button>
 
-            <button className="border border-gray-700 hover:bg-gray-900 transition px-8 py-4 rounded-xl">
-              View Dashboard
+            <button className="border border-white/10 hover:border-cyan-500/30 hover:bg-white/5 transition px-8 py-4 rounded-xl">
+              Explore Platform
             </button>
           </div>
         </div>
       </section>
-      <section className="py-24 border-t border-gray-900">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12 text-center px-6">
 
-          <div>
-            <h2 className="text-5xl font-bold text-purple-500">30K+</h2>
-            <p className="text-gray-400 mt-3">Active Users</p>
-          </div>
+      <section className="py-24 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-4 gap-6">
+            {[
+              {
+                value: "40K+",
+                label: "Community Members",
+              },
+              {
+                value: "300+",
+                label: "Managed Servers",
+              },
+              {
+                value: "10M+",
+                label: "Actions Processed",
+              },
+              {
+                value: "99.9%",
+                label: "Platform Uptime",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-2xl border border-white/10 bg-white/2 p-8 text-center"
+              >
+                <h2 className="text-5xl font-bold text-cyan-400">
+                  {stat.value}
+                </h2>
 
-          <div>
-            <h2 className="text-5xl font-bold text-purple-500">300+</h2>
-            <p className="text-gray-400 mt-3">Servers</p>
-          </div>
-
-          <div>
-            <h2 className="text-5xl font-bold text-purple-500">50+</h2>
-            <p className="text-gray-400 mt-3">Commands</p>
-          </div>
-
-          <div>
-            <h2 className="text-5xl font-bold text-purple-500">99.9%</h2>
-            <p className="text-gray-400 mt-3">Uptime</p>
-          </div>
-
-        </div>
-      </section>
-
-      <section className="py-32 bg-linear-to-b from-black to-gray-950">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-
-          <h2 className="text-4xl font-bold mb-6">
-            Built for Structured Communities
-          </h2>
-
-          <p className="text-gray-400 max-w-2xl mx-auto mb-20">
-            CYNI isn’t a casual utility bot. It’s operational infrastructure
-            for growing and managing Discord ecosystems.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-10 text-left">
-
-            <Feature 
-              title="Advanced Moderation"
-              desc="20+ moderation tools with smart automations, role hierarchies, and granular permissions."
-            />
-
-            <Feature 
-              title="Automod Engine"
-              desc="Spam detection, anti-raid protection, link filtering, and customizable rule systems."
-            />
-
-            <Feature 
-              title="Ticket System"
-              desc="Fully structured support channels with logging, transcripts, and permission control."
-            />
-
-            <Feature 
-              title="Staff Management"
-              desc="Infraction tracking, activity logs, leave of absence management, and reporting."
-            />
-
-            <Feature 
-              title="Application System"
-              desc="Custom forms with automated review workflows and staff notifications."
-            />
-
-            <Feature 
-              title="Giveaway Engine"
-              desc="Automated giveaway hosting with fair winner selection and entry validation."
-            />
-
+                <p className="mt-3 text-gray-400">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="py-32 border-t border-gray-900">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+      <FeaturesSection />
 
+      <section className="py-32 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-20 items-center">
           <div>
-            <h2 className="text-4xl font-bold mb-6">
-              Powerful Web Dashboard
+            <div className="inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-1 text-sm text-cyan-400 mb-6">
+              Dashboard
+            </div>
+
+            <h2 className="text-5xl font-bold mb-6">
+              Operational Control Center
             </h2>
 
-            <p className="text-gray-400 mb-6">
-              Configure moderation, automations, logs, and community workflows
-              without touching a command. Real-time control with enterprise-level stability.
+            <p className="text-gray-400 text-lg leading-relaxed mb-8">
+              Manage every aspect of your community from a centralized
+              dashboard. Configure automations, monitor moderation activity,
+              review applications, manage support tickets, and analyze server
+              health in real time.
             </p>
 
-            <ul className="space-y-3 text-gray-300">
-              <li>• Real-time configuration</li>
-              <li>• Audit log visibility</li>
-              <li>• Permission control</li>
-              <li>• Server analytics</li>
-            </ul>
+            <div className="space-y-4 text-gray-300">
+              <div>✓ Real-time configuration</div>
+              <div>✓ Audit log visibility</div>
+              <div>✓ Permission management</div>
+              <div>✓ Community analytics</div>
+            </div>
           </div>
 
-          <div className="bg-gray-900 h-80 rounded-2xl border border-gray-800 flex items-center justify-center text-gray-500">
-            Dashboard Preview
+          <div className="rounded-3xl overflow-hidden border border-white/10 bg-white/2">
+            <Image
+              src="/images/dashboard.png"
+              alt="CYNI Dashboard Preview"
+              width={1600}
+              height={900}
+              className="w-full h-auto object-cover"
+              priority
+            />
           </div>
-
         </div>
       </section>
 
-      <section className="py-32 bg-gray-950 border-t border-gray-900 text-center px-6">
+      <section className="py-32 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center rounded-full border border-cyan-500/20 bg-cyan-500/10 px-4 py-1 text-sm text-cyan-400 mb-6">
+            Architecture
+          </div>
 
-        <h2 className="text-4xl font-bold mb-8">
-          Built for Roleplay & Structured Communities
-        </h2>
+          <h2 className="text-5xl font-bold mb-6">Built for Reliability</h2>
 
-        <p className="text-gray-400 max-w-2xl mx-auto">
-          Seamless PRC integration and scalable architecture designed for
-          police roleplay communities and high-organization servers.
-        </p>
+          <p className="text-gray-400 text-lg max-w-3xl mx-auto mb-16">
+            Designed with fault tolerance, intelligent caching, real-time event
+            processing, and scalable infrastructure to support growing
+            communities.
+          </p>
 
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              "Real-Time Events",
+              "High Availability",
+              "Audit Logging",
+              "Role Security",
+              "Automated Workflows",
+              "Scalable Architecture",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-2xl border border-white/10 bg-white/2 p-8"
+              >
+                <h3 className="font-semibold text-lg">{item}</h3>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="py-32 text-center border-t border-gray-900">
+      <section className="py-32 border-t border-white/5">
+        <div className="max-w-4xl mx-auto text-center px-6">
+          <h2 className="text-5xl font-bold mb-6">
+            Designed for Organized Communities
+          </h2>
 
-        <h2 className="text-4xl font-bold mb-6">
-          Upgrade Your Server Infrastructure
+          <p className="text-gray-400 text-lg leading-relaxed">
+            Whether managing a roleplay server, gaming network, educational
+            community, creator hub, or support organization, CYNI provides the
+            operational tools needed to scale effectively.
+          </p>
+        </div>
+      </section>
+
+      <section className="py-32 border-t border-white/5 text-center px-6">
+        <h2 className="text-5xl font-bold mb-6">
+          Ready to Scale Your Community?
         </h2>
 
-        <p className="text-gray-400 mb-10">
-          CYNI is built for communities that operate at scale.
+        <p className="text-gray-400 text-lg max-w-2xl mx-auto mb-10">
+          Join communities already using CYNI to streamline operations, automate
+          workflows, and maintain structure at scale.
         </p>
 
-        <button className="bg-purple-600 hover:bg-purple-700 transition px-10 py-5 rounded-xl font-semibold text-lg shadow-lg shadow-purple-600/30">
+        <button className="bg-cyan-500 text-black hover:bg-cyan-400 transition px-10 py-5 rounded-xl font-semibold text-lg shadow-lg shadow-cyan-500/30">
           Add CYNI to Your Server
         </button>
-
       </section>
-
-
-      <footer className="py-10 border-t border-gray-900 text-center text-gray-500 text-sm">
-        <FooterYear />
-      </footer>
-
     </main>
-  );
-}
-
-function Feature({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="bg-gray-900 p-8 rounded-2xl border border-gray-800 hover:border-purple-500 transition">
-      <h3 className="text-xl font-semibold mb-4">{title}</h3>
-      <p className="text-gray-400">{desc}</p>
-    </div>
   );
 }
