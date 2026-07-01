@@ -5,13 +5,51 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 
+type GuildAccess = {
+  administrator: boolean;
+
+  discord: {
+    staff: boolean;
+    management: boolean;
+  };
+
+  roblox: {
+    staff: boolean;
+    management: boolean;
+  };
+};
+
 type Guild = {
   id: string;
   name: string;
   icon: string | null;
   manageable: boolean;
-  source: "discord" | "fallback" | "enriched";
+  access: GuildAccess;
 };
+
+function getAccessLabel(access: GuildAccess) {
+  if (access.administrator) {
+    return "Administrator";
+  }
+
+  if (access.discord.management) {
+    return "Discord Management";
+  }
+
+  if (access.discord.staff) {
+    return "Discord Staff";
+  }
+
+  if (access.roblox.management) {
+    return "Roblox Management";
+  }
+
+  if (access.roblox.staff) {
+    return "Roblox Staff";
+  }
+
+  return "No Access";
+}
 
 export default function Dashboard() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
@@ -22,13 +60,14 @@ export default function Dashboard() {
 
   const router = useRouter();
 
-  const loadGuilds = async (forceRefresh = false) => {
+  const loadGuilds = async () => {
     try {
       setError("");
 
-      const url = forceRefresh ? "/api/guilds?refresh=true" : "/api/guilds";
+      const res = await fetch("/api/guilds", {
+        cache: "no-store",
+      });
 
-      const res = await fetch(url);
       const data = await res.json();
 
       if (!res.ok) {
@@ -37,6 +76,7 @@ export default function Dashboard() {
             ? data.error
             : "Failed to load communities",
         );
+
         setGuilds([]);
         return;
       }
@@ -47,23 +87,13 @@ export default function Dashboard() {
       setGuilds([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
-
-    try {
-      const res = await fetch("/api/guilds/refresh", {
-        method: "POST",
-      });
-
-      if (res.ok) {
-        await loadGuilds(true);
-      }
-    } finally {
-      setRefreshing(false);
-    }
+    await loadGuilds();
   };
 
   useEffect(() => {
@@ -87,6 +117,7 @@ export default function Dashboard() {
           Your Communities
         </h1>
       </div>
+
       <div className="mb-10">
         <div className="relative">
           <Search
@@ -98,36 +129,13 @@ export default function Dashboard() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search communities..."
-            className="
-              w-full
-              rounded-xl
-              border
-              border-white/10
-              bg-white/2
-              py-3
-              pl-11
-              pr-14
-              outline-none
-              transition
-              focus:border-cyan-500/20
-            "
+            className="w-full rounded-xl border border-white/10 bg-white/2 py-3 pl-11 pr-14 outline-none transition focus:border-cyan-500/20"
           />
 
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="
-              absolute
-              right-2
-              top-1/2
-              -translate-y-1/2
-              rounded-lg
-              p-2
-              text-gray-400
-              transition
-              hover:bg-white/4
-              hover:text-cyan-400
-            "
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-gray-400 transition hover:bg-white/4 hover:text-cyan-400"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           </button>
@@ -145,18 +153,10 @@ export default function Dashboard() {
           Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="
-                rounded-2xl
-                border
-                border-white/10
-                p-5
-                animate-pulse
-              "
+              className="animate-pulse rounded-2xl border border-white/10 p-5"
             >
               <div className="h-14 w-14 rounded-xl bg-white/4" />
-
               <div className="mt-4 h-5 w-32 rounded bg-white/4" />
-
               <div className="mt-6 h-4 w-24 rounded bg-white/4" />
             </div>
           ))}
@@ -166,22 +166,7 @@ export default function Dashboard() {
             <button
               key={guild.id}
               onClick={() => router.push(`/dashboard/${guild.id}`)}
-              className="
-                group
-                flex
-                items-center
-                gap-4
-                rounded-xl
-                border
-                border-white/10
-                bg-white/2
-                px-4
-                py-3
-                text-left
-                transition
-                hover:bg-white/3
-                hover:border-white/20
-              "
+              className="group flex items-center gap-4 rounded-xl border border-white/10 bg-white/2 px-4 py-3 text-left transition hover:border-white/20 hover:bg-white/3"
             >
               <Image
                 src={
@@ -198,23 +183,14 @@ export default function Dashboard() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{guild.name}</p>
 
-                <p
-                  className={`text-xs ${
-                    guild.manageable ? "text-cyan-400" : "text-gray-500"
-                  }`}
-                >
-                  {guild.manageable ? "Manage Access" : "View Access"}
+                <p className="text-xs text-cyan-400">
+                  {getAccessLabel(guild.access)}
                 </p>
               </div>
 
               <ArrowRight
                 size={16}
-                className="
-                  text-gray-500
-                  transition
-                  group-hover:text-cyan-400
-                  group-hover:translate-x-1
-                "
+                className="text-gray-500 transition group-hover:translate-x-1 group-hover:text-cyan-400"
               />
             </button>
           ))}

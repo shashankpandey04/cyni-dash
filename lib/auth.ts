@@ -7,13 +7,20 @@ export const authOptions: NextAuthOptions = {
     DiscordProvider({
       clientId: process.env.DISCORD_CLIENT_ID!,
       clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+
+      authorization: {
+        params: {
+          scope: "identify guilds",
+        },
+      },
     }),
   ],
+
+  secret: process.env.NEXTAUTH_SECRET,
 
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60,
-    updateAge: 24 * 60 * 60,
   },
 
   callbacks: {
@@ -25,26 +32,28 @@ export const authOptions: NextAuthOptions = {
 
         token.id = discordProfile.id;
         token.username = discordProfile.username;
-        token.displayName = discordProfile.global_name ?? discordProfile.username;
+        token.displayName =
+          discordProfile.global_name ?? discordProfile.username;
+
         token.avatar = discordProfile.avatar
           ? `https://cdn.discordapp.com/avatars/${discordProfile.id}/${discordProfile.avatar}.png`
-          : "";
+          : null;
       }
+
       return token;
     },
 
     async session({ session, token }) {
-      session.accessToken = token.accessToken;
+      session.accessToken = token.accessToken as string;
 
       session.user = {
-        id: token.id,
-        username: token.username,
-        displayName: token.displayName,
-        avatar: token.avatar,
+        id: token.id as string,
+        username: token.username as string,
+        displayName: token.displayName as string,
+        avatar: token.avatar as string | null,
       };
 
       return session;
     },
-  }
-  
+  },
 };

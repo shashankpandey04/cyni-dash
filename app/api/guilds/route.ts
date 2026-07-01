@@ -1,13 +1,8 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { getCached, setCached } from "@/lib/cache";
-import { fetchUserGuilds } from "@/lib/discord";
 
-const ACCESS = {
-  DISCORD: 1 << 0,
-  ROBLOX: 1 << 1,
-  MANAGER: 1 << 2,
-};
+import { authOptions } from "@/lib/auth";
+import { botFetch } from "@/lib/bot";
+import { fetchUserGuilds } from "@/lib/discord";
 
 function isManageableGuild(permissions: string) {
   const perms = BigInt(permissions);
@@ -18,77 +13,71 @@ function isManageableGuild(permissions: string) {
   return (perms & ADMIN) === ADMIN || (perms & MANAGE_GUILD) === MANAGE_GUILD;
 }
 
-function resolveDefaultAccess(manageable: boolean) {
-  if (!manageable) return 0;
-
-  return ACCESS.DISCORD;
-}
-
-async function fetchGuildsFromDiscord(accessToken: string) {
-  const data = await fetchUserGuilds(accessToken);
-
-  const guilds = data.map((g: any) => {
-    const manageable = isManageableGuild(g.permissions);
-
-    return {
-      id: g.id,
-      name: g.name,
-      icon: g.icon ?? null,
-      permissions: g.permissions,
-      manageable,
-
-      access: resolveDefaultAccess(manageable),
-      source: "discord",
-    };
-  });
-
-  const filtered = guilds.filter((g: any) => g.manageable);
-
-  return filtered;
-}
-
-export async function GET(request: Request) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session?.accessToken) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const url = new URL(request.url);
-  const forceRefresh = url.searchParams.get("refresh") === "true";
-
-  const cacheKey = `guilds:${session.user?.id}`;
-
-  if (!forceRefresh) {
-    const cached = await getCached(cacheKey);
-    if (cached) {
-      return Response.json(cached);
-    }
+    return Response.json(
+      {
+        error: "Unauthorized",
+      },
+      {
+        status: 401,
+      },
+    );
   }
 
   try {
-    const guilds = await fetchGuildsFromDiscord(session.accessToken);
+    // Fetch guilds from Discord
+    const guilds = await fetchUserGuilds(session.accessToken);
 
-    await setCached(cacheKey, guilds);
+    // Only keep guilds user can manage
+    const manageableGuilds = guilds.filter((guild: any) =>
+      isManageableGuild(guild.permissions),
+    );
 
-    return Response.json(guilds);
+    // Fetch access levels from CYNI Bot
+    const access = await botFetch("/website/access/bulk", {
+      method: "POST",
+      body: JSON.stringify({
+        guild_ids: manageableGuilds.map((g: any) => Number(g.id)),
+      }),
+    });
+
+    // Merge Discord + Bot data
+    const data = manageableGuilds.map((guild: any) => ({
+      id: guild.id,
+      name: guild.name,
+      icon: guild.icon ?? null,
+      permissions: guild.permissions,
+      manageable: true,
+
+      access: access[guild.id] ?? {
+        administrator: false,
+
+        discord: {
+          staff: false,
+          management: false,
+        },
+
+        roblox: {
+          staff: false,
+          management: false,
+        },
+      },
+    }));
+
+    return Response.json(data);
   } catch (error) {
-    console.error("Guild fetch failed:", error);
+    console.error(error);
 
     return Response.json(
-      [
-        {
-          id: "fallback",
-          name: "Unknown Server",
-          icon: null,
-          permissions: "0",
-          manageable: false,
-
-          access: 0,
-          source: "fallback",
-        },
-      ],
-      { status: 200 }
+      {
+        error: "Failed to fetch guilds.",
+      },
+      {
+        status: 500,
+      },
     );
   }
 }
